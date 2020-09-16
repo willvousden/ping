@@ -38,7 +38,7 @@ def main(argv):
     with args.file.open() as f:
         for line in map(str.strip, itertools.islice(f, 1, None)):
             time = datetime.strptime(
-                re.match("^\[(.+)\]", line).group(1), "%Y-%m-%d %H:%M:%S"
+                re.match("^\[(.+)\]", line).group(1), "%Y-%m-%dT%H:%M:%S.%f"
             )
             if "Request timeout" in line:
                 seq = int(re.search("\sicmp_seq (\d+)$", line).group(1))
