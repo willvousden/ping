@@ -70,9 +70,17 @@ def main(argv):
     outages_ave[outages_ave == 0] = np.nan
 
     f, (a1, a2) = pp.subplots(2, sharex=True)
+
     a1.plot(times_mid, outages_ave)
-    a2.scatter(times, latencies, s=1)
+    a1.set_ylabel("Outage rate (s/min)")
+
+    finite = np.isfinite(latencies)
+    a2.scatter(times[finite], latencies[finite], s=1)
     a2.set_yscale("log")
+    a2.set_ylabel("Latency (ms)")
+
+    f.autofmt_xdate()
+    f.tight_layout()
     pp.show()
 
 
