@@ -36,15 +36,15 @@ def main(argv):
         "-t",
         "--time",
         type=int,
-        metavar="MINUTES",
-        help="How many minutes of history to process",
+        metavar="SECONDS",
+        help="How many seconds of history to process",
     )
     args = parser.parse_args(argv[1:])
 
     latency_map = {}
 
     if args.time:
-        target_time = datetime.now() - timedelta(minutes=args.time)
+        target_time = datetime.now() - timedelta(seconds=args.time)
     else:
         target_time = datetime.fromtimestamp(0)
 
