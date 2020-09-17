@@ -48,6 +48,8 @@ def main(argv):
     else:
         target_time = datetime.fromtimestamp(0)
 
+    seq_offset = 0
+    seq_prev = -1
     with args.file.open() as f:
         for line in map(str.strip, itertools.islice(f, 1, None)):
             time = datetime.strptime(
@@ -63,7 +65,12 @@ def main(argv):
                 seq = int(re.search("\sicmp_seq=(\d+)\s", line).group(1))
                 latency = float(re.match(".+\stime=(.+) ms$", line).group(1))
 
+            # The ICMP sequence number eventually wraps around.
+            if seq == 0:
+                seq_offset = seq_prev + 1
+            seq += seq_offset
             latency_map[seq] = (time, latency)
+            seq_prev = seq
 
     _, tuples = zip(*sorted(latency_map.items()))
     times, latencies = zip(*tuples)
