@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 
 import argparse
+import itertools
 import matplotlib as mpl
 import matplotlib.pyplot as pp
 import numpy as np
-import itertools
+import pandas as pd
 import re
 import sys
 
@@ -64,33 +65,21 @@ def main(argv):
 
             latency_map[seq] = (time, latency)
 
-    seqs, tuples = zip(*sorted(latency_map.items()))
+    _, tuples = zip(*sorted(latency_map.items()))
     times, latencies = zip(*tuples)
-
-    # Change times to start time, rather than end time.
-    times = [times[0] + s * timedelta(seconds=1) for s in seqs]
-
-    seqs = np.array(seqs)
-    times = np.array(times)
-    latencies = np.array(latencies)
+    latencies = pd.Series(latencies, index=times)
     outages = latencies > args.latency_threshold
 
-    times_mid = (
-        times[: -args.window] + (times[args.window :] - times[: -args.window]) / 2
-    )
-    outages_sum = np.cumsum(outages)
-    outages_ave = (
-        (outages_sum[args.window :] - outages_sum[: -args.window]) / args.window * 60
-    )
+    outages_ave = outages.rolling(args.window, center=True).mean() * 60
     outages_ave[outages_ave == 0] = np.nan
 
     f, (a1, a2) = pp.subplots(2, sharex=True)
 
-    a1.plot(times_mid, outages_ave)
+    a1.plot(outages_ave.index, outages_ave)
     a1.set_ylabel("Outage rate (s/min)")
 
     finite = np.isfinite(latencies)
-    a2.scatter(times[finite], latencies[finite], s=1)
+    a2.scatter(latencies.loc[finite].index, latencies.loc[finite], s=1)
     a2.set_yscale("log")
     a2.set_ylabel("Latency (ms)")
 
