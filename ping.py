@@ -31,15 +31,30 @@ def main(argv):
         metavar="SECONDS",
         help="The moving average window size, in seconds, for calculating the outage rate.",
     )
+    parser.add_argument(
+        "-t",
+        "--time",
+        type=int,
+        metavar="MINUTES",
+        help="How many minutes of history to process",
+    )
     args = parser.parse_args(argv[1:])
 
     latency_map = {}
+
+    if args.time:
+        target_time = datetime.now() - timedelta(minutes=args.time)
+    else:
+        target_time = datetime.fromtimestamp(0)
 
     with args.file.open() as f:
         for line in map(str.strip, itertools.islice(f, 1, None)):
             time = datetime.strptime(
                 re.match("^\[(.+)\]", line).group(1), "%Y-%m-%dT%H:%M:%S.%f"
             )
+            if time < target_time:
+                continue
+
             if "Request timeout" in line:
                 seq = int(re.search("\sicmp_seq (\d+)$", line).group(1))
                 latency = np.inf
