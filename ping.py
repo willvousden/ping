@@ -81,12 +81,18 @@ def main(argv):
     outages_ave[outages_ave == 0] = np.nan
 
     f, (a1, a2) = pp.subplots(2, sharex=True)
+    colours = mpl.rcParams['axes.prop_cycle'].by_key()['color']
 
     a1.plot(outages_ave.index, outages_ave)
     a1.set_ylabel("Outage rate (s/min)")
 
     finite = np.isfinite(latencies)
     a2.scatter(latencies.loc[finite].index, latencies.loc[finite], s=1)
+    a2.plot(
+        latencies.loc[finite].index,
+        latencies.loc[finite].rolling(args.window, center=True).quantile(0.99),
+        c=colours[1]
+    )
     a2.set_yscale("log")
     a2.set_ylabel("Latency (ms)")
 
