@@ -47,7 +47,8 @@ def read_latencies(file, target_time=None):
 
     _, tuples = zip(*sorted(latency_map.items()))
     times, latencies = zip(*tuples)
-    return pd.Series(latencies, index=times)
+    weights = [delta.total_seconds() for delta in pd.Series(times).diff()]
+    return pd.DataFrame({"ms": latencies, "weight": weights}, index=times)
 
 
 def main(argv):
