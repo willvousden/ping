@@ -1,13 +1,9 @@
 #!/usr/bin/env python3
 
 import argparse
-import re
 import signal
-import subprocess
 import sys
-import time
 
-from datetime import datetime, timedelta
 from pathlib import Path
 from ping import parse_lines, pack_record
 
@@ -20,13 +16,16 @@ def main(argv):
                         action="store_true")
     args = parser.parse_args(argv[1:])
 
-    with args.output.open("ab") as f:
-        for time, seq, latency in parse_lines(sys.stdin):
-            print(time, latency)
+    mode = "ab" if args.append else "wb"
+    with args.output.open(mode) as f:
+        for time, _, latency in parse_lines(sys.stdin):
             f.write(pack_record(time, latency))
             f.flush()
 
 
 if __name__ == "__main__":
-    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
-    sys.exit(main(sys.argv))
+    try:
+        signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+        sys.exit(main(sys.argv))
+    except KeyboardInterrupt:
+        pass
