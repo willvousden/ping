@@ -113,22 +113,15 @@ def main(argv):
         help="The moving average window size, in seconds, for calculating the outage rate.",
     )
     parser.add_argument(
-        "-t",
-        "--time",
+        "-c",
+        "--count",
         type=int,
-        metavar="SECONDS",
-        help="How many seconds of history to process",
+        metavar="PINGS",
+        help="How many ping records of history to process.",
     )
     args = parser.parse_args(argv[1:])
 
-    if args.time:
-        target_time = datetime.now() - timedelta(seconds=args.time)
-    else:
-        target_time = datetime.fromtimestamp(0)
-
-    #  latencies = read_latencies(args.file, target_time)
-    latencies = get_latencies(args.file)
-    print(latencies)
+    latencies = get_latencies(args.file, args.count)
     outages = latencies > args.latency_threshold
 
     outages_ave = outages.rolling(args.window, center=True).mean() * 60
