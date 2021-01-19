@@ -43,14 +43,15 @@ def pack_record(time, latency):
 
 
 def unpack_record(buffer):
-    return RECORD_STRUCT.unpack(buffer)
+    time, latency = RECORD_STRUCT.unpack(buffer)
+    return datetime.fromtimestamp(time), latency
 
 
 def tail_records(path, count):
     path = Path(path)
     with path.open("rb") as f:
         f.seek(-count * RECORD_STRUCT.size, io.SEEK_END)
-        while True:
+        for i in range(count):
             buffer = f.read(RECORD_STRUCT.size)
             if buffer:
                 yield unpack_record(buffer)
@@ -64,11 +65,21 @@ def main(argv):
     import numpy as np
     import pandas as pd
 
-    def read_latencies(file, target_time=None):
-        file = Path(file)
-        if target_time is None:
-            target_time = datetime.fromtimestamp(0)
+    def get_latencies(path, count=None):
+        path = Path(path)
+        if count is None:
+            count = path.stat().st_size // RECORD_STRUCT.size
+        times = np.empty(count, dtype="datetime64[ms]")
+        latencies = np.empty(count, dtype="float64")
+        for i, (time, latency) in enumerate(tail_records(path, count)):
+            times[i] = time
+            latencies[i] = latency
 
+        weights = [delta.total_seconds() for delta in pd.Series(times).diff()]
+        return pd.DataFrame({"ms": latencies, "weight": weights}, index=times)
+
+    def read_latencies(file):
+        file = Path(file)
         latency_map = {}
         seq_offset = 0
         seq_prev = -1
@@ -115,7 +126,9 @@ def main(argv):
     else:
         target_time = datetime.fromtimestamp(0)
 
-    latencies = read_latencies(args.file, target_time)
+    #  latencies = read_latencies(args.file, target_time)
+    latencies = get_latencies(args.file)
+    print(latencies)
     outages = latencies > args.latency_threshold
 
     outages_ave = outages.rolling(args.window, center=True).mean() * 60
@@ -127,11 +140,11 @@ def main(argv):
     a1.plot(outages_ave.index, outages_ave)
     a1.set_ylabel("Outage rate (s/min)")
 
-    finite = np.isfinite(latencies)
-    a2.scatter(latencies.loc[finite].index, latencies.loc[finite], s=1)
+    finite = np.isfinite(latencies["ms"])
+    a2.scatter(latencies.loc[finite].index, latencies["ms"].loc[finite], s=1)
     a2.plot(
         latencies.loc[finite].index,
-        latencies.loc[finite].rolling(args.window, center=True).quantile(0.99),
+        latencies["ms"].loc[finite].rolling(args.window, center=True).quantile(0.99),
         c=colours[1],
     )
     a2.set_yscale("log")
