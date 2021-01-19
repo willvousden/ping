@@ -1,16 +1,65 @@
 #!/usr/bin/env python3
 
 import argparse
+import io
 import itertools
 import matplotlib as mpl
 import matplotlib.pyplot as pp
 import numpy as np
 import pandas as pd
 import re
+import struct
 import sys
 
 from datetime import datetime, timedelta
 from pathlib import Path
+
+
+RECORD_STRUCT = struct.Struct("df")
+
+
+def parse_lines(lines):
+    seq_offset = 0
+    seq_prev = -1
+    for line in map(str.strip, lines):
+        time = datetime.strptime(
+            re.match(r"^\[(.+)\]", line).group(1), "%Y-%m-%dT%H:%M:%S.%f"
+        )
+
+        if "Request timeout" in line:
+            seq = int(re.search(r"\sicmp_seq (\d+)$", line).group(1))
+            latency = float("inf")
+        elif "64 bytes" in line:
+            seq = int(re.search(r"\sicmp_seq=(\d+)\s", line).group(1))
+            latency = float(re.match(r".+\stime=(.+) ms$", line).group(1))
+        else:
+            continue
+
+        # The ICMP sequence number eventually wraps around.
+        if seq == 0:
+            seq_offset = seq_prev + 1
+
+        yield time, seq, latency
+
+
+def pack_record(time, latency):
+    return RECORD_STRUCT.pack(time.timestamp(), latency)
+
+
+def unpack_record(buffer):
+    return RECORD_STRUCT.unpack(buffer)
+
+
+def tail_records(path, count):
+    path = Path(path)
+    with path.open("rb") as f:
+        f.seek(-count * RECORD_STRUCT.size, io.SEEK_END)
+        while True:
+            buffer = f.read(RECORD_STRUCT.size)
+            if buffer:
+                yield unpack_record(buffer)
+            else:
+                break
 
 
 def read_latencies(file, target_time=None):
@@ -22,25 +71,7 @@ def read_latencies(file, target_time=None):
     seq_offset = 0
     seq_prev = -1
     with file.open() as f:
-        for line in map(str.strip, itertools.islice(f, 1, None)):
-            time = datetime.strptime(
-                re.match("^\[(.+)\]", line).group(1), "%Y-%m-%dT%H:%M:%S.%f"
-            )
-            if time < target_time:
-                continue
-
-            if "Request timeout" in line:
-                seq = int(re.search("\sicmp_seq (\d+)$", line).group(1))
-                latency = np.inf
-            elif "64 bytes" in line:
-                seq = int(re.search("\sicmp_seq=(\d+)\s", line).group(1))
-                latency = float(re.match(".+\stime=(.+) ms$", line).group(1))
-            else:
-                continue
-
-            # The ICMP sequence number eventually wraps around.
-            if seq == 0:
-                seq_offset = seq_prev + 1
+        for time, seq, latency in parse_lines(itertools.islice(f, 1, None)):
             seq += seq_offset
             latency_map[seq] = (time, latency)
             seq_prev = seq
