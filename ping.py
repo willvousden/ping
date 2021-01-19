@@ -3,10 +3,6 @@
 import argparse
 import io
 import itertools
-import matplotlib as mpl
-import matplotlib.pyplot as pp
-import numpy as np
-import pandas as pd
 import re
 import struct
 import sys
@@ -62,27 +58,31 @@ def tail_records(path, count):
                 break
 
 
-def read_latencies(file, target_time=None):
-    file = Path(file)
-    if target_time is None:
-        target_time = datetime.fromtimestamp(0)
-
-    latency_map = {}
-    seq_offset = 0
-    seq_prev = -1
-    with file.open() as f:
-        for time, seq, latency in parse_lines(itertools.islice(f, 1, None)):
-            seq += seq_offset
-            latency_map[seq] = (time, latency)
-            seq_prev = seq
-
-    _, tuples = zip(*sorted(latency_map.items()))
-    times, latencies = zip(*tuples)
-    weights = [delta.total_seconds() for delta in pd.Series(times).diff()]
-    return pd.DataFrame({"ms": latencies, "weight": weights}, index=times)
-
-
 def main(argv):
+    import matplotlib as mpl
+    import matplotlib.pyplot as pp
+    import numpy as np
+    import pandas as pd
+
+    def read_latencies(file, target_time=None):
+        file = Path(file)
+        if target_time is None:
+            target_time = datetime.fromtimestamp(0)
+
+        latency_map = {}
+        seq_offset = 0
+        seq_prev = -1
+        with file.open() as f:
+            for time, seq, latency in parse_lines(itertools.islice(f, 1, None)):
+                seq += seq_offset
+                latency_map[seq] = (time, latency)
+                seq_prev = seq
+
+        _, tuples = zip(*sorted(latency_map.items()))
+        times, latencies = zip(*tuples)
+        weights = [delta.total_seconds() for delta in pd.Series(times).diff()]
+        return pd.DataFrame({"ms": latencies, "weight": weights}, index=times)
+
     parser = argparse.ArgumentParser()
     parser.add_argument("file", type=Path)
     parser.add_argument(

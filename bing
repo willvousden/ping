@@ -19,6 +19,7 @@ def main(argv):
     mode = "ab" if args.append else "wb"
     with args.output.open(mode) as f:
         for time, _, latency in parse_lines(sys.stdin):
+            print(time, latency)
             f.write(pack_record(time, latency))
             f.flush()
 
