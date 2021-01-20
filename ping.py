@@ -7,6 +7,7 @@ import re
 import struct
 import sys
 
+from common import density_scatter
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -119,7 +120,8 @@ def main(argv):
 
     quantile = 0.99
     finite = np.isfinite(latencies["ms"])
-    a2.scatter(
+    density_scatter(
+        a2,
         latencies.loc[finite].index,
         latencies["ms"].loc[finite],
         s=1,
