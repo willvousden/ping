@@ -78,22 +78,6 @@ def main(argv):
         weights = [delta.total_seconds() for delta in pd.Series(times).diff()]
         return pd.DataFrame({"ms": latencies, "weight": weights}, index=times)
 
-    def read_latencies(file):
-        file = Path(file)
-        latency_map = {}
-        seq_offset = 0
-        seq_prev = -1
-        with file.open() as f:
-            for time, seq, latency in parse_lines(itertools.islice(f, 1, None)):
-                seq += seq_offset
-                latency_map[seq] = (time, latency)
-                seq_prev = seq
-
-        _, tuples = zip(*sorted(latency_map.items()))
-        times, latencies = zip(*tuples)
-        weights = [delta.total_seconds() for delta in pd.Series(times).diff()]
-        return pd.DataFrame({"ms": latencies, "weight": weights}, index=times)
-
     parser = argparse.ArgumentParser()
     parser.add_argument("file", type=Path)
     parser.add_argument(
@@ -122,7 +106,7 @@ def main(argv):
     args = parser.parse_args(argv[1:])
 
     latencies = get_latencies(args.file, args.count)
-    outages = latencies > args.latency_threshold
+    outages = latencies["ms"] > args.latency_threshold
 
     outages_ave = outages.rolling(args.window, center=True).mean() * 60
     outages_ave[outages_ave == 0] = np.nan
@@ -133,13 +117,24 @@ def main(argv):
     a1.plot(outages_ave.index, outages_ave)
     a1.set_ylabel("Outage rate (s/min)")
 
+    quantile = 0.99
     finite = np.isfinite(latencies["ms"])
-    a2.scatter(latencies.loc[finite].index, latencies["ms"].loc[finite], s=1)
+    a2.scatter(
+        latencies.loc[finite].index,
+        latencies["ms"].loc[finite],
+        s=1,
+        label="Ping latency",
+    )
     a2.plot(
         latencies.loc[finite].index,
-        latencies["ms"].loc[finite].rolling(args.window, center=True).quantile(0.99),
+        latencies["ms"]
+        .loc[finite]
+        .rolling(args.window, center=True)
+        .quantile(quantile),
         c=colours[1],
+        label=f"{quantile} quantile",
     )
+    a2.legend()
     a2.set_yscale("log")
     a2.set_ylabel("Latency (ms)")
 
