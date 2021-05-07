@@ -5,7 +5,7 @@ import signal
 import sys
 
 from pathlib import Path
-from ping import parse_lines, pack_record
+from pinglib.format import ping
 
 
 def main(argv):
@@ -18,9 +18,9 @@ def main(argv):
 
     mode = "ab" if args.append else "wb"
     with args.output.open(mode) as f:
-        for time, _, latency in parse_lines(sys.stdin):
+        for time, _, latency in ping.parse_lines(sys.stdin):
             print(time, latency)
-            f.write(pack_record(time, latency))
+            f.write(ping.pack_record(time, latency))
             f.flush()
 
 

@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 
 
-def read_curl(file, target_time=None):
+def read_to_pandas(file, target_time=None):
     path = Path(file)
     if target_time is None:
         target_time = datetime.fromtimestamp(0)

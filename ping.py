@@ -1,63 +1,11 @@
 #!/usr/bin/env python3
 
 import argparse
-import io
-import itertools
-import re
-import struct
 import sys
 
-from common import density_scatter
-from datetime import datetime, timedelta
 from pathlib import Path
-
-
-RECORD_STRUCT = struct.Struct("df")
-
-
-def parse_lines(lines):
-    seq_offset = 0
-    seq_prev = -1
-    for line in map(str.strip, lines):
-        time = datetime.strptime(
-            re.match(r"^\[(.+)\]", line).group(1), "%Y-%m-%dT%H:%M:%S.%f"
-        )
-
-        if "Request timeout" in line:
-            seq = int(re.search(r"\sicmp_seq (\d+)$", line).group(1))
-            latency = float("inf")
-        elif "64 bytes" in line:
-            seq = int(re.search(r"\sicmp_seq=(\d+)\s", line).group(1))
-            latency = float(re.match(r".+\stime=(.+) ms$", line).group(1))
-        else:
-            continue
-
-        # The ICMP sequence number eventually wraps around.
-        if seq == 0:
-            seq_offset = seq_prev + 1
-
-        yield time, seq, latency
-
-
-def pack_record(time, latency):
-    return RECORD_STRUCT.pack(time.timestamp(), latency)
-
-
-def unpack_record(buffer):
-    time, latency = RECORD_STRUCT.unpack(buffer)
-    return datetime.fromtimestamp(time), latency
-
-
-def tail_records(path, count):
-    path = Path(path)
-    with path.open("rb") as f:
-        f.seek(-count * RECORD_STRUCT.size, io.SEEK_END)
-        for i in range(count):
-            buffer = f.read(RECORD_STRUCT.size)
-            if buffer:
-                yield unpack_record(buffer)
-            else:
-                break
+from pinglib.format.ping import get_record_count, tail_records
+from pinglib.plotting.common import density_scatter
 
 
 def main(argv):
@@ -69,7 +17,7 @@ def main(argv):
     def get_latencies(path, count=None):
         path = Path(path)
         if count is None:
-            count = path.stat().st_size // RECORD_STRUCT.size
+            count = get_record_count(path)
         times = np.empty(count, dtype="datetime64[ms]")
         latencies = np.empty(count, dtype="float64")
         for i, (time, latency) in enumerate(tail_records(path, count)):

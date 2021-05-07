@@ -6,11 +6,10 @@ import matplotlib.pyplot as pp
 import numpy as np
 import sys
 
-from common import density_scatter
-from curl import read_curl
 from datetime import datetime, timedelta
 from pathlib import Path
-from ping import read_latencies
+from pinglib.format import ping, curl
+from pinglib.plotting.common import density_scatter
 from scipy.interpolate import interp1d
 
 
@@ -123,10 +122,12 @@ def main(argv):
     else:
         target_time = datetime.fromtimestamp(0)
 
-    durations = read_curl(args.curl, target_time)
+    # TODO: implement target_time
+
+    durations = curl.read_to_pandas(args.curl)
     durations_isfinite = np.isfinite(durations["ms"]) & np.isfinite(durations["weight"])
     durations = durations[durations_isfinite]
-    latencies = read_latencies(args.ping, target_time)
+    latencies = ping.read_to_pandas(args.ping)
     latencies_isfinite = np.isfinite(latencies["ms"]) & np.isfinite(latencies["weight"])
     latencies = latencies[latencies_isfinite]
 
