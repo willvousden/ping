@@ -62,10 +62,14 @@ def get_record_count(path):
     return path.stat().st_size // RECORD_STRUCT.size
 
 
-def read_to_pandas(path):
-    data = np.fromfile(str(path), dtype=RECORD_NUMPY_DTYPE)
+def read_to_pandas(path, count=None):
+    if count is None:
+        count = -1
+
+    data = np.fromfile(str(path), dtype=RECORD_NUMPY_DTYPE, count=count)
     df = pd.DataFrame(data)
     df["weight"] = df["timestamp"].diff()
     df.index = pd.to_datetime(df["timestamp"], unit="s")
+    df.index.name = None
     del df["timestamp"]
     return df

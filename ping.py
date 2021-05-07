@@ -4,7 +4,7 @@ import argparse
 import sys
 
 from pathlib import Path
-from pinglib.format.ping import get_record_count, tail_records
+from pinglib.format.ping import read_to_pandas
 from pinglib.plotting.common import density_scatter
 
 
@@ -12,20 +12,6 @@ def main(argv):
     import matplotlib as mpl
     import matplotlib.pyplot as pp
     import numpy as np
-    import pandas as pd
-
-    def get_latencies(path, count=None):
-        path = Path(path)
-        if count is None:
-            count = get_record_count(path)
-        times = np.empty(count, dtype="datetime64[ms]")
-        latencies = np.empty(count, dtype="float64")
-        for i, (time, latency) in enumerate(tail_records(path, count)):
-            times[i] = time
-            latencies[i] = latency
-
-        weights = [delta.total_seconds() for delta in pd.Series(times).diff()]
-        return pd.DataFrame({"ms": latencies, "weight": weights}, index=times)
 
     parser = argparse.ArgumentParser()
     parser.add_argument("file", type=Path)
@@ -54,10 +40,10 @@ def main(argv):
     )
     args = parser.parse_args(argv[1:])
 
-    latencies = get_latencies(args.file, args.count)
-    outages = latencies["ms"] > args.latency_threshold
+    latencies = read_to_pandas(args.file, args.count)
+    outages = latencies["weight"][latencies["ms"] > args.latency_threshold]
 
-    outages_ave = outages.rolling(args.window, center=True).mean() * 60
+    outages_ave = outages.rolling(f"{args.window}s").sum() * 60 / args.window
     outages_ave[outages_ave == 0] = np.nan
 
     f, (a1, a2) = pp.subplots(2, sharex=True)
