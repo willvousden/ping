@@ -3,14 +3,15 @@ import pandas as pd
 from datetime import datetime
 from pathlib import Path
 
+CURL_FORMAT = Path("curl-format.txt").read_text()
+
 
 def read_to_pandas(file, target_time=None):
-    path = Path(file)
     if target_time is None:
         target_time = datetime.fromtimestamp(0)
 
     names = ["timestamp"]
-    names += [s[2:-1] for s in Path("curl-format.txt").read_text()[:-3].split()]
+    names += [s[2:-1] for s in CURL_FORMAT[:-3].split()]
     series = (
         pd.read_csv(
             file,

@@ -13,8 +13,8 @@ RECORD_NUMPY_DTYPE = np.dtype([("timestamp", np.float64), ("ms", np.float32)])
 
 
 def parse_lines(lines):
-    seq_offset = 0
-    seq_prev = -1
+    #  seq_offset = 0
+    #  seq_prev = -1
     for line in map(str.strip, lines):
         time = datetime.strptime(
             re.match(r"^\[(.+)\]", line).group(1), "%Y-%m-%dT%H:%M:%S.%f"
@@ -29,9 +29,10 @@ def parse_lines(lines):
         else:
             continue
 
-        # The ICMP sequence number eventually wraps around.
-        if seq == 0:
-            seq_offset = seq_prev + 1
+        #  # The ICMP sequence number eventually wraps around.
+        #  # FIXME
+        #  if seq == 0:
+        #  seq_offset = seq_prev + 1
 
         yield time, seq, latency
 
