@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
 
 import argparse
-import matplotlib as mpl
 import matplotlib.pyplot as pp
 import numpy as np
 import sys
 
-from datetime import datetime, timedelta
 from pathlib import Path
 from pinglib.format import ping, curl
 from pinglib.plotting.common import density_scatter
-from scipy.interpolate import interp1d
 
 
 def cdf(durations, latencies, outage_mask):
@@ -52,9 +49,7 @@ def cdf(durations, latencies, outage_mask):
 
 
 def scatter(durations, latencies, outage_mask):
-
     f, (a1, a2) = pp.subplots(2, sharex=True)
-    colours = mpl.rcParams["axes.prop_cycle"].by_key()["color"]
 
     density_scatter(a1, durations.index, durations["ms"], s=1)
     a1.set_yscale("log")
@@ -117,10 +112,10 @@ def main(argv):
 
     args = parser.parse_args(argv[1:])
 
-    if args.time:
-        target_time = datetime.now() - timedelta(seconds=args.time)
-    else:
-        target_time = datetime.fromtimestamp(0)
+    #  if args.time:
+    #  target_time = datetime.now() - timedelta(seconds=args.time)
+    #  else:
+    #  target_time = datetime.fromtimestamp(0)
 
     # TODO: implement target_time
 

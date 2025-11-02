@@ -10,10 +10,8 @@ from pinglib.format import ping
 
 def main(argv):
     parser = argparse.ArgumentParser(prog=argv[0])
-    parser.add_argument("output",
-                        type=Path)
-    parser.add_argument("-a", "--append",
-                        action="store_true")
+    parser.add_argument("output", type=Path)
+    parser.add_argument("-a", "--append", action="store_true")
     args = parser.parse_args(argv[1:])
 
     mode = "ab" if args.append else "wb"
